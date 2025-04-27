@@ -1,4 +1,3 @@
-// lib/services/auth_service.dart
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,49 +5,59 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AuthService {
   final LocalAuthentication _localAuth = LocalAuthentication();
   
-  // Check if device supports biometric authentication
-  Future<bool> isBiometricAvailable() async {
-    bool canCheckBiometrics = false;
+  // Check if face authentication is available
+  Future<bool> isFaceAuthAvailable() async {
     try {
-      canCheckBiometrics = await _localAuth.canCheckBiometrics;
+      // First check if device supports biometrics at all
+      bool canCheckBiometrics = await _localAuth.canCheckBiometrics;
+      bool deviceSupported = await _localAuth.isDeviceSupported();
+      
+      if (!canCheckBiometrics || !deviceSupported) {
+        return false;
+      }
+      
+      // Then specifically check for face biometric
+      List<BiometricType> availableBiometrics = await _localAuth.getAvailableBiometrics();
+      
+      // Check if face authentication is available
+      return availableBiometrics.contains(BiometricType.face) || 
+             availableBiometrics.contains(BiometricType.strong);
     } on PlatformException catch (e) {
-      print(e);
+      print('Error checking face availability: $e');
+      return false;
     }
-    return canCheckBiometrics;
   }
   
-  // Get available biometric types
-  Future<List<BiometricType>> getAvailableBiometrics() async {
-    List<BiometricType> availableBiometrics = [];
-    try {
-      availableBiometrics = await _localAuth.getAvailableBiometrics();
-    } on PlatformException catch (e) {
-      print(e);
-    }
-    return availableBiometrics;
-  }
-  
-  // Authenticate user with face ID
-  Future<bool> authenticateWithBiometrics(String action) async {
+  // Authenticate user with face
+  Future<bool> authenticateWithFace(String action) async {
     bool authenticated = false;
+    
     try {
+      // First check if face authentication is available
+      if (!await isFaceAuthAvailable()) {
+        return false;
+      }
+      
+      // Get reason text based on action
+      String reason = 'Scan your face to $action';
+      
       authenticated = await _localAuth.authenticate(
-        localizedReason: 'Scan your Biometric to $action',
+        localizedReason: reason,
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
         ),
       );
     } on PlatformException catch (e) {
-      print(e);
+      print('Error authenticating with face: $e');
       return false;
     }
     return authenticated;
   }
   
-  // Register user by setting a flag in shared preferences
-  Future<bool> registerUser() async {
-    bool authenticated = await authenticateWithBiometrics('register');
+  // Register user face
+  Future<bool> registerFace() async {
+    bool authenticated = await authenticateWithFace('register');
     if (authenticated) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isRegistered', true);
@@ -57,15 +66,9 @@ class AuthService {
     return false;
   }
   
-  // Login user
-  Future<bool> loginUser() async {
-    return await authenticateWithBiometrics('login');
-  }
-  
-  // Logout user
-  Future<void> logout() async {
-    // We're not removing the registration, just logging out
-    // In a real app, you might want to handle this differently
+  // Login with face
+  Future<bool> loginWithFace() async {
+    return await authenticateWithFace('login');
   }
   
   // Check if user is registered

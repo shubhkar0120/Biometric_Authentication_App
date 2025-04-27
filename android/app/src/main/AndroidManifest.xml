@@ -1,7 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Add these permissions for biometric authentication -->
-    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+   <!-- Required for face authentication -->
+<uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+<!-- For older Android versions that might not support USE_BIOMETRIC -->
+<uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+<!-- Add camera permission for face recognition on some devices -->
+<uses-permission android:name="android.permission.CAMERA" />
+
+<!-- For face recognition, often requires hardware features -->
+<uses-feature android:name="android.hardware.camera" android:required="false" />
+<uses-feature android:name="android.hardware.camera.front" android:required="false" />
     
     <application
         android:label="biometric_login_system"
